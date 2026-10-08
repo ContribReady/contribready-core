@@ -1,0 +1,26 @@
+{
+  "name": "@contribready/core",
+  "version": "0.1.0",
+  "description": "Deterministic contributor-readiness analysis engine",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "pack:check": "npm pack --dry-run --cache .npm-cache",
+    "verify": "npm run lint && npm test && npm run pack:check"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

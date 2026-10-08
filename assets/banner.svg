@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc">
+  <title id="title">ContribReady Core</title><desc id="desc">Deterministic contributor-readiness analysis engine.</desc>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#111827"/><stop offset="1" stop-color="#27345d"/></linearGradient><linearGradient id="accent" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b9cff"/><stop offset="1" stop-color="#62e6b5"/></linearGradient></defs>
+  <rect width="1200" height="300" rx="28" fill="url(#bg)"/><circle cx="1080" cy="80" r="250" fill="#8b9cff" opacity=".12"/>
+  <g fill="none" stroke="url(#accent)" stroke-width="4"><path d="M860 80h220M860 150h150l55-55h55M860 220h220"/></g><g fill="url(#accent)"><circle cx="860" cy="80" r="10"/><circle cx="1080" cy="80" r="10"/><circle cx="860" cy="150" r="10"/><circle cx="1065" cy="95" r="10"/><circle cx="860" cy="220" r="10"/><circle cx="1080" cy="220" r="10"/></g>
+  <text x="76" y="126" fill="#f4f8fb" font-family="Segoe UI,Arial,sans-serif" font-size="54" font-weight="700">ContribReady Core</text><text x="80" y="180" fill="#c4cbe4" font-family="Segoe UI,Arial,sans-serif" font-size="25">Deterministic analysis engine.</text><text x="80" y="228" fill="#62e6b5" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="600">PURE  •  REUSABLE  •  TESTABLE</text>
+</svg>
