@@ -2,11 +2,17 @@
   <img src="assets/banner.svg" alt="ContribReady Core — deterministic analysis engine" width="100%" />
 </div>
 
+<div align="center">
+  <a href="https://github.com/ContribReady/contribready-core/actions/workflows/ci.yml"><img src="https://github.com/ContribReady/contribready-core/actions/workflows/ci.yml/badge.svg?branch=main" alt="Core CI" /></a>
+  <a href="https://github.com/ContribReady/contribready"><img src="https://img.shields.io/badge/Product-ContribReady-16a085" alt="ContribReady product repository" /></a>
+  <a href="https://github.com/ContribReady/contribready-cli"><img src="https://img.shields.io/badge/Used%20by-CLI-6875f5" alt="ContribReady CLI repository" /></a>
+</div>
+
 # @contribready/core
 
 The reusable deterministic ContribReady engine. It owns evidence-neutral contracts, path classification, setup/testing/contribution/issue rule metadata and evaluation, weighted scoring, recommendations, findings, summaries, and reports. Its evidence index and rules are pure and receive file contents from an adapter; it has no CLI, filesystem, GitHub, HTTP, or target-repository execution dependency.
 
-The product-level source of truth is maintained in the main `contribready` repository. Its architecture and rule documentation define how this package fits into the complete product.
+The product-level source of truth is maintained in the main [`contribready`](https://github.com/ContribReady/contribready) repository. Its architecture and rule documentation define how this package fits into the complete product. The user-facing executable lives in [`contribready-cli`](https://github.com/ContribReady/contribready-cli).
 
 ## What Core owns
 
