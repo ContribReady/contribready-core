@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Issue readiness now treats empty template labels as prompts rather than evidence, searches issue-body evidence separately from the title, and reports accurate messages for failed checks.
 - Added initial typed evidence, rule, finding, report, and score contracts.
 - Added initial deterministic setup, testing, contribution, and security rules.
 - Exported the core rule registry for CLI consumption.
