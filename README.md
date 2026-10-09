@@ -30,6 +30,6 @@ flowchart LR
 
 For contribution and support paths, see [CONTRIBUTING.md](CONTRIBUTING.md) and [SUPPORT.md](SUPPORT.md).
 
-The v0.1 compatibility target is Node.js 20, 22, and 24 on Ubuntu, Windows, and macOS. Run `npm ci && npm run verify` to lint/typecheck, build and test, and validate the npm package contents without publishing.
+The npm package is not published yet. For local development, check out `contribready-core` and `contribready-cli` as sibling directories; the CLI currently links to this source checkout. From this repository, run `npm ci && npm run verify` to lint/typecheck, build and test, and validate the npm package contents without publishing. The v0.1 compatibility target is Node.js 20, 22, and 24 on Ubuntu, Windows, and macOS.
 
 Phase 15 expands static evidence classification for Deno, Bun, uv/PDM, SBT/Gradle, Docker, Nix, and version/toolchain files. Classification remains pure and does not execute any ecosystem tooling.

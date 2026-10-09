@@ -102,6 +102,20 @@ test("issue rules distinguish actionable and vague issue evidence", () => {
   assert.equal(vague.filter((finding) => finding.rule.area === "issue" && finding.outcome === "fail").length, 6);
 });
 
+test("empty issue template labels are not treated as evidence and failures are described accurately", () => {
+  const emptyTemplate = evaluateRules({ issue: {
+    title: "Bug report",
+    body: "## Problem\n\n### Steps to reproduce:\n\n**Expected behavior:**\n\nActual behavior:\n\nAffected component:\n\nAcceptance criteria:\n\nDefinition of done:",
+    source: "template.md",
+  } }, coreRules).filter((finding) => finding.rule.area === "issue");
+  assert.deepEqual(emptyTemplate.map((finding) => finding.outcome), ["pass", "fail", "fail", "fail", "fail", "fail"]);
+  assert.equal(emptyTemplate[0].message, "Evidence indicates a concrete problem or goal.");
+  for (const finding of emptyTemplate.slice(1)) {
+    assert.match(finding.message, /^No /);
+    assert.equal(finding.evidence.length, 0);
+  }
+});
+
 test("scoring recommendations are deterministic and prioritize failures", () => {
   const findings = evaluateRules({ repository: { files: { "CONTRIBUTING.md": "Contribute here" } } }, coreRules);
   const report = makeReport("repository", findings);
