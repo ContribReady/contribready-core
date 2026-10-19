@@ -18,7 +18,8 @@ test("summary is explainable and bounded", () => {
   assert.equal(summary.unknownRules, 12);
   assert.equal(makeReport("repository", findings).schemaVersion, 2);
   assert.equal(findings.find((finding) => finding.outcome === "unknown").evidenceMissing.length, 1);
-  assert.equal(findings.every((finding) => finding.conflictsAssessed === false), true);
+  assert.equal(findings.find((finding) => finding.rule.id === "CR-SETUP-002")?.conflictsAssessed, true);
+  assert.equal(findings.filter((finding) => finding.rule.id !== "CR-SETUP-002").every((finding) => finding.conflictsAssessed === false), true);
 });
 
 test("unknown findings do not count as failed points and an all-unknown score is unavailable", () => {
@@ -69,6 +70,52 @@ test("setup rules distinguish complete, missing, and inapplicable setup evidence
   assert.equal(byId.get("CR-SETUP-003"), "fail");
   assert.equal(byId.get("CR-SETUP-004"), "unknown");
   assert.equal(byId.get("CR-SETUP-005"), "unknown");
+});
+
+test("runtime version conflicts are explicit, unresolved, source-attributed, and deterministic", () => {
+  const context = { repository: { files: {
+    "README.md": "Getting started: use Node.js 20.",
+    "CONTRIBUTING.md": "Install Node 18 before running the tests.",
+    ".github/workflows/ci.yml": "steps:\n  - uses: actions/setup-node@v5\n    with:\n      node-version: 20",
+  } } };
+  const [first] = evaluateRules(context, coreRules).filter((finding) => finding.rule.id === "CR-SETUP-002");
+  const [second] = evaluateRules(context, coreRules).filter((finding) => finding.rule.id === "CR-SETUP-002");
+  assert.equal(first.outcome, "unknown");
+  assert.equal(first.rule.version, 2);
+  assert.equal(first.conflictsAssessed, true);
+  assert.deepEqual(first.evidenceMissing, ["A single, consistent supported runtime/toolchain version"]);
+  assert.deepEqual(first.conflictingEvidence.map((item) => [item.source, item.details.version]), [
+    [".github/workflows/ci.yml", "20"],
+    ["CONTRIBUTING.md", "18"],
+    ["README.md", "20"],
+  ]);
+  assert.ok(first.conflictingEvidence.every((item) => item.excerpt === `node version claim: ${item.details.version}`));
+  assert.deepEqual(first, second);
+});
+
+test("matching runtime versions do not conflict and insufficient version evidence stays unknown", () => {
+  const matching = evaluateRules({ repository: { files: {
+    "README.md": "Use Node.js 20.",
+    "CONTRIBUTING.md": "Node version 20 is required.",
+    ".github/workflows/ci.yml": "node-version: 20.x",
+  } } }, coreRules).find((finding) => finding.rule.id === "CR-SETUP-002");
+  assert.equal(matching.outcome, "pass");
+  assert.equal(matching.conflictsAssessed, true);
+  assert.equal(matching.conflictingEvidence.length, 0);
+
+  const missing = evaluateRules({ repository: { files: { "README.md": "Install and test the project." } } }, coreRules)
+    .find((finding) => finding.rule.id === "CR-SETUP-002");
+  assert.equal(missing.outcome, "unknown");
+  assert.equal(missing.conflictsAssessed, true);
+  assert.equal(missing.conflictingEvidence.length, 0);
+
+  const ambiguous = evaluateRules({ repository: { files: {
+    "README.md": "Node.js 18 was previously supported; the current setup uses Node.js 20.",
+    "CONTRIBUTING.md": "Use Node.js 20.",
+  } } }, coreRules).find((finding) => finding.rule.id === "CR-SETUP-002");
+  assert.equal(ambiguous.outcome, "unknown");
+  assert.match(ambiguous.message, /cannot determine whether these are alternatives/);
+  assert.equal(ambiguous.conflictingEvidence.length, 0);
 });
 
 test("testing rules distinguish commands, reproduction, CI, and expectations", () => {
