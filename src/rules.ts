@@ -38,7 +38,9 @@ const runtimeVersions: Readonly<Record<string, RegExp>> = {
   rust: /\b(?:rust|rustc|rust-version)\s*(?:version\s*)?[:=]?\s*v?(\d+(?:\.\d+){0,2})(?:\.x)?\b/i,
 };
 const versionClaims = (repository: RepositoryEvidence | undefined): { runtime: string; version: string; source: string }[] => {
-  const candidates = orderedFiles(repository).filter(([path]) => /\.(?:md|mdx|rst|adoc|txt)$/i.test(path) || /^\.github\/workflows\/[^/]+\.ya?ml$/i.test(path));
+  const candidates = orderedFiles(repository)
+    .map(([path, content]) => [path.replaceAll("\\", "/"), content] as const)
+    .filter(([path]) => /\.(?:md|mdx|rst|adoc|txt)$/i.test(path) || /^\.github\/workflows\/[^/]+\.ya?ml$/i.test(path));
   const claims: { runtime: string; version: string; source: string }[] = [];
   for (const [source, content] of candidates) {
     for (const line of content.split(/\r?\n/)) {
