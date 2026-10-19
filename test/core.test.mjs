@@ -11,12 +11,27 @@ test("core rules are deterministic for identical evidence", () => {
 test("summary is explainable and bounded", () => {
   const findings = evaluateRules({ repository: { files: { "CONTRIBUTING.md": "yes" } } }, coreRules);
   const summary = summarize(findings);
-  assert.equal(summary.earned, 13.75);
-  assert.equal(summary.possible, 100);
-  assert.equal(summary.percentage, 14);
-  assert.equal(summary.scoringVersion, 1);
-  assert.equal(summary.unknownRules, 6);
-  assert.equal(makeReport("repository", findings).schemaVersion, 1);
+  assert.equal(summary.earned, 0);
+  assert.equal(summary.possible, 20);
+  assert.equal(summary.percentage, 0);
+  assert.equal(summary.scoringVersion, 2);
+  assert.equal(summary.unknownRules, 12);
+  assert.equal(makeReport("repository", findings).schemaVersion, 2);
+  assert.equal(findings.find((finding) => finding.outcome === "unknown").evidenceMissing.length, 1);
+  assert.equal(findings.every((finding) => finding.conflictsAssessed === false), true);
+});
+
+test("unknown findings do not count as failed points and an all-unknown score is unavailable", () => {
+  const unknownOnly = [{
+    rule: { id: "CR-TEST-999", version: 1, area: "testing", name: "unknown", purpose: "unknown", severity: "info", weight: 1, recommendation: "Review evidence", falsePositiveConsiderations: [], falseNegativeLimitations: [] },
+    outcome: "unknown", message: "Evidence is inconclusive", evidence: [], evidenceMissing: ["Test output"], conflictingEvidence: [], conflictsAssessed: false, recommendation: "Review evidence",
+  }];
+  const score = summarize(unknownOnly);
+  assert.equal(score.earned, 0);
+  assert.equal(score.possible, 0);
+  assert.equal(score.percentage, null);
+  assert.equal(score.unknownRules, 1);
+  assert.equal(score.evaluatedRules, 0);
 });
 
 test("evidence classification is deterministic and ignores unknown source files", () => {
@@ -40,11 +55,11 @@ test("expanded ecosystem installation evidence remains static and deterministic"
 
 test("setup rules distinguish complete, missing, and inapplicable setup evidence", () => {
   const ready = { repository: { files: {
-    "README.md": "Getting started: Node.js 20. Run npm install. Set the environment variable API_URL.",
+    "README.md": "Getting started: Node.js 20.\n\n```sh\nnpm ci\nnpm test\n```",
     "package.json": "{}",
     ".env.example": "API_URL=http://localhost",
-    "CONTRIBUTING.md": "Contribute here",
-    "SECURITY.md": "Report privately",
+    "CONTRIBUTING.md": "Create a branch, run npm test, and open a pull request.",
+    "SECURITY.md": "Report vulnerabilities privately using Security → Advisories → Report a vulnerability.",
   } } };
   const readyFindings = evaluateRules(ready, coreRules).filter((finding) => finding.rule.area === "setup");
   assert.deepEqual(readyFindings.map((finding) => finding.outcome), ["pass", "pass", "pass", "pass", "pass"]);
@@ -52,13 +67,13 @@ test("setup rules distinguish complete, missing, and inapplicable setup evidence
   const incomplete = evaluateRules({ repository: { files: { "README.md": "Project overview", "package.json": "{}" } } }, coreRules);
   const byId = new Map(incomplete.map((finding) => [finding.rule.id, finding.outcome]));
   assert.equal(byId.get("CR-SETUP-003"), "fail");
-  assert.equal(byId.get("CR-SETUP-004"), "fail");
-  assert.equal(byId.get("CR-SETUP-005"), "not-applicable");
+  assert.equal(byId.get("CR-SETUP-004"), "unknown");
+  assert.equal(byId.get("CR-SETUP-005"), "unknown");
 });
 
 test("testing rules distinguish commands, reproduction, CI, and expectations", () => {
   const ready = { repository: { files: {
-    "README.md": "Run npm test. To reproduce, use this minimal example. Expected result: the test should pass.",
+    "README.md": "Run npm test.\n\nSteps to reproduce:\n1. Run the parser with an empty fixture.\n\nExpected result: the test should pass.",
     ".github/workflows/ci.yml": "name: CI",
     "tests/example.test.ts": "assert(true)",
   } } };
@@ -76,23 +91,36 @@ test("testing rules distinguish commands, reproduction, CI, and expectations", (
 test("contribution rules distinguish workflow, review, and support guidance", () => {
   const ready = { repository: { files: {
     "CONTRIBUTING.md": "Create a branch and open a pull request. Maintainer review and required checks are needed.",
-    "SUPPORT.md": "Ask questions in the community discussion forum.",
+    "SUPPORT.md": "Ask questions in the community discussion forum at https://example.test/support.",
   } } };
   const findings = evaluateRules(ready, coreRules).filter((finding) => finding.rule.area === "contribution");
   assert.deepEqual(findings.map((finding) => finding.outcome), ["pass", "pass", "pass", "pass"]);
 
   const incomplete = evaluateRules({ repository: { files: { "CONTRIBUTING.md": "Contribute here" } } }, coreRules);
   const byId = new Map(incomplete.map((finding) => [finding.rule.id, finding.outcome]));
-  assert.equal(byId.get("CR-CONTRIB-001"), "pass");
-  assert.equal(byId.get("CR-CONTRIB-002"), "fail");
-  assert.equal(byId.get("CR-CONTRIB-003"), "fail");
+  assert.equal(byId.get("CR-CONTRIB-001"), "unknown");
+  assert.equal(byId.get("CR-CONTRIB-002"), "unknown");
+  assert.equal(byId.get("CR-CONTRIB-003"), "unknown");
   assert.equal(byId.get("CR-CONTRIB-004"), "unknown");
+});
+
+test("conventional policy filenames with vague text do not pass actionability rules", () => {
+  const findings = evaluateRules({ repository: { files: {
+    "README.md": "Project overview. Runtime configuration and getting started are important.",
+    "CONTRIBUTING.md": "Contribute here.",
+    "SECURITY.md": "Report privately.",
+    "SUPPORT.md": "Ask in the community.",
+  } } }, coreRules);
+  const byId = new Map(findings.map((finding) => [finding.rule.id, finding]));
+  for (const id of ["CR-SETUP-001", "CR-CONTRIB-001", "CR-CONTRIB-004", "CR-SECURITY-001"]) {
+    assert.notEqual(byId.get(id).outcome, "pass", `${id} must not pass from a filename/phrase alone`);
+  }
 });
 
 test("issue rules distinguish actionable and vague issue evidence", () => {
   const ready = { issue: {
     title: "Parser fails on empty input",
-    body: "Context: the parser crashes. Steps to reproduce: run the command with an empty fixture. Expected behavior: return an empty result. Affected module: src/parser. Acceptance criteria: the fixture passes. Definition of done: tests pass and documentation is updated.",
+    body: "Context: the parser crashes because an empty document causes an exception.\n\nSteps to reproduce:\n1. Run the parser with an empty fixture.\n\nExpected behavior: return an empty result.\nActual behavior: the parser crashes.\n\nAffected module: src/parser.\n\nAcceptance criteria:\n- The empty fixture returns an empty result.\n\nDefinition of done:\n- Tests pass and documentation is updated.",
     source: "issue.md",
   } };
   const readyFindings = evaluateRules(ready, coreRules).filter((finding) => finding.rule.area === "issue");
@@ -102,15 +130,42 @@ test("issue rules distinguish actionable and vague issue evidence", () => {
   assert.equal(vague.filter((finding) => finding.rule.area === "issue" && finding.outcome === "fail").length, 6);
 });
 
+test("issue rules accept Markdown headings and spacing before populated lists", () => {
+  const body = `## Context
+The parser crashes for empty input.
+
+## Steps to reproduce
+
+- Run the parser with the empty fixture.
+
+## Expected behavior: return an empty result.
+
+## Actual behavior: the parser throws an exception.
+
+## Technical scope
+Affected module: src/parser.ts.
+
+## Acceptance criteria:
+
+- Empty input returns an empty result.
+
+## Definition of done:
+
+- Regression tests pass.
+`;
+  const findings = evaluateRules({ issue: { title: "Parser fails for empty input", body, source: "issue.md" } }, coreRules)
+    .filter((finding) => finding.rule.area === "issue");
+  assert.deepEqual(findings.map((finding) => finding.outcome), ["pass", "pass", "pass", "pass", "pass", "pass"]);
+});
+
 test("empty issue template labels are not treated as evidence and failures are described accurately", () => {
   const emptyTemplate = evaluateRules({ issue: {
     title: "Bug report",
     body: "## Problem\n\n### Steps to reproduce:\n\n**Expected behavior:**\n\nActual behavior:\n\nAffected component:\n\nAcceptance criteria:\n\nDefinition of done:",
     source: "template.md",
   } }, coreRules).filter((finding) => finding.rule.area === "issue");
-  assert.deepEqual(emptyTemplate.map((finding) => finding.outcome), ["pass", "fail", "fail", "fail", "fail", "fail"]);
-  assert.equal(emptyTemplate[0].message, "Evidence indicates a concrete problem or goal.");
-  for (const finding of emptyTemplate.slice(1)) {
+  assert.deepEqual(emptyTemplate.map((finding) => finding.outcome), ["fail", "fail", "fail", "fail", "fail", "fail"]);
+  for (const finding of emptyTemplate) {
     assert.match(finding.message, /^No /);
     assert.equal(finding.evidence.length, 0);
   }

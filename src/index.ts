@@ -32,6 +32,7 @@ export interface RuleMetadata {
   readonly weight: number;
   readonly recommendation: string;
   readonly falsePositiveConsiderations: readonly string[];
+  readonly falseNegativeLimitations: readonly string[];
 }
 
 export interface Finding {
@@ -39,6 +40,9 @@ export interface Finding {
   readonly outcome: Outcome;
   readonly message: string;
   readonly evidence: readonly Evidence[];
+  readonly evidenceMissing: readonly string[];
+  readonly conflictingEvidence: readonly Evidence[];
+  readonly conflictsAssessed: boolean;
   readonly recommendation: string;
 }
 
@@ -47,12 +51,13 @@ export interface RuleContext {
   readonly issue?: IssueEvidence;
 }
 
-export type RuleEvaluator = (context: RuleContext) => Finding;
+export type RuleEvaluation = Omit<Finding, "evidenceMissing" | "conflictingEvidence" | "conflictsAssessed">;
+export type RuleEvaluator = (context: RuleContext) => RuleEvaluation;
 
 export interface Rule { readonly metadata: RuleMetadata; readonly evaluate: RuleEvaluator; }
 
 export interface Report {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
   readonly subject: "repository" | "issue";
   readonly findings: readonly Finding[];
   readonly score: ScoreSummary;
@@ -65,6 +70,7 @@ export interface CategoryScore {
   readonly earned: number;
   readonly possible: number;
   readonly percentage: number | null;
+  readonly coveragePercentage: number | null;
   readonly passedRules: number;
   readonly failedRules: number;
   readonly unknownRules: number;
@@ -75,10 +81,11 @@ export interface ScoreSummary {
   readonly earned: number;
   readonly possible: number;
   readonly percentage: number | null;
+  readonly coveragePercentage: number | null;
   readonly unknownRules: number;
   readonly notApplicableRules: number;
   readonly evaluatedRules: number;
-  readonly scoringVersion: 1;
+  readonly scoringVersion: 2;
   readonly categoryScores: readonly CategoryScore[];
 }
 
@@ -95,7 +102,15 @@ export const AREA_WEIGHTS: Readonly<Record<Area, number>> = { setup: 30, testing
 export const RULES: readonly Rule[] = [];
 
 export function evaluateRules(context: RuleContext, rules: readonly Rule[] = RULES): readonly Finding[] {
-  return rules.map((rule) => rule.evaluate(context));
+  return rules.map((rule) => {
+    const finding = rule.evaluate(context);
+    return {
+      ...finding,
+      evidenceMissing: finding.outcome === "fail" || finding.outcome === "unknown" ? [finding.rule.purpose] : [],
+      conflictingEvidence: [],
+      conflictsAssessed: false,
+    };
+  });
 }
 
 const round = (value: number): number => Math.round(value * 100) / 100;
@@ -105,15 +120,17 @@ export function summarize(findings: readonly Finding[]): ScoreSummary {
   const categoryScores = areas.map((area): CategoryScore => {
     const category = findings.filter((finding) => finding.rule.area === area);
     const applicable = category.filter((finding) => finding.outcome !== "not-applicable");
+    const determinate = applicable.filter((finding) => finding.outcome === "pass" || finding.outcome === "fail");
     const pointsPerRule = applicable.length === 0 ? 0 : AREA_WEIGHTS[area] / applicable.length;
-    const earned = applicable.filter((finding) => finding.outcome === "pass").length * pointsPerRule;
-    const possible = applicable.length === 0 ? 0 : AREA_WEIGHTS[area];
-    return { area, weight: AREA_WEIGHTS[area], earned: round(earned), possible, percentage: possible === 0 ? null : Math.round((earned / possible) * 100), passedRules: applicable.filter((finding) => finding.outcome === "pass").length, failedRules: applicable.filter((finding) => finding.outcome === "fail").length, unknownRules: applicable.filter((finding) => finding.outcome === "unknown").length, notApplicableRules: category.filter((finding) => finding.outcome === "not-applicable").length };
+    const earned = determinate.filter((finding) => finding.outcome === "pass").length * pointsPerRule;
+    const possible = determinate.length * pointsPerRule;
+    return { area, weight: AREA_WEIGHTS[area], earned: round(earned), possible: round(possible), percentage: possible === 0 ? null : Math.round((earned / possible) * 100), coveragePercentage: applicable.length === 0 ? null : Math.round((determinate.length / applicable.length) * 100), passedRules: determinate.filter((finding) => finding.outcome === "pass").length, failedRules: determinate.filter((finding) => finding.outcome === "fail").length, unknownRules: applicable.filter((finding) => finding.outcome === "unknown").length, notApplicableRules: category.filter((finding) => finding.outcome === "not-applicable").length };
   });
-  const applicable = findings.filter((finding) => finding.outcome !== "not-applicable");
   const earned = round(categoryScores.reduce((sum, category) => sum + category.earned, 0));
   const possible = categoryScores.reduce((sum, category) => sum + category.possible, 0);
-  return { earned, possible, percentage: possible === 0 ? null : Math.round((earned / possible) * 100), unknownRules: findings.filter((finding) => finding.outcome === "unknown").length, notApplicableRules: findings.filter((finding) => finding.outcome === "not-applicable").length, evaluatedRules: applicable.length, scoringVersion: 1, categoryScores };
+  const evaluatedRules = findings.filter((finding) => finding.outcome === "pass" || finding.outcome === "fail").length;
+  const applicableRules = findings.filter((finding) => finding.outcome !== "not-applicable").length;
+  return { earned, possible, percentage: possible === 0 ? null : Math.round((earned / possible) * 100), coveragePercentage: applicableRules === 0 ? null : Math.round((evaluatedRules / applicableRules) * 100), unknownRules: findings.filter((finding) => finding.outcome === "unknown").length, notApplicableRules: findings.filter((finding) => finding.outcome === "not-applicable").length, evaluatedRules, scoringVersion: 2, categoryScores };
 }
 
 export function buildRecommendations(findings: readonly Finding[]): readonly Recommendation[] {
@@ -122,7 +139,7 @@ export function buildRecommendations(findings: readonly Finding[]): readonly Rec
 }
 
 export function makeReport(subject: Report["subject"], findings: readonly Finding[]): Report {
-  return { schemaVersion: 1, subject, findings, score: summarize(findings), recommendations: buildRecommendations(findings) };
+  return { schemaVersion: 2, subject, findings, score: summarize(findings), recommendations: buildRecommendations(findings) };
 }
 
 export { coreRules } from "./rules.js";
