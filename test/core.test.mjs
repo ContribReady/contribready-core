@@ -129,7 +129,6 @@ test("Windows-style workflow paths are normalized and included in runtime confli
     ["README.md", "18"],
   ]);
 });
-
 test("testing rules distinguish commands, reproduction, CI, and expectations", () => {
   const ready = { repository: { files: {
     "README.md": "Run npm test.\n\nSteps to reproduce:\n1. Run the parser with an empty fixture.\n\nExpected result: the test should pass.",
