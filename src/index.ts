@@ -24,7 +24,7 @@ export interface IssueEvidence {
 
 export interface RuleMetadata {
   readonly id: string;
-  readonly version: 1;
+  readonly version: 1 | 2;
   readonly area: Area;
   readonly name: string;
   readonly purpose: string;
@@ -51,7 +51,7 @@ export interface RuleContext {
   readonly issue?: IssueEvidence;
 }
 
-export type RuleEvaluation = Omit<Finding, "evidenceMissing" | "conflictingEvidence" | "conflictsAssessed">;
+export type RuleEvaluation = Omit<Finding, "evidenceMissing" | "conflictingEvidence" | "conflictsAssessed"> & Partial<Pick<Finding, "evidenceMissing" | "conflictingEvidence" | "conflictsAssessed">>;
 export type RuleEvaluator = (context: RuleContext) => RuleEvaluation;
 
 export interface Rule { readonly metadata: RuleMetadata; readonly evaluate: RuleEvaluator; }
@@ -106,9 +106,9 @@ export function evaluateRules(context: RuleContext, rules: readonly Rule[] = RUL
     const finding = rule.evaluate(context);
     return {
       ...finding,
-      evidenceMissing: finding.outcome === "fail" || finding.outcome === "unknown" ? [finding.rule.purpose] : [],
-      conflictingEvidence: [],
-      conflictsAssessed: false,
+      evidenceMissing: finding.evidenceMissing ?? (finding.outcome === "fail" || finding.outcome === "unknown" ? [finding.rule.purpose] : []),
+      conflictingEvidence: finding.conflictingEvidence ?? [],
+      conflictsAssessed: finding.conflictsAssessed ?? false,
     };
   });
 }

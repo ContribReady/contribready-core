@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Versioned `CR-SETUP-002` as rule v2 and detect explicit runtime/toolchain version disagreements across documentation and GitHub workflows. Conflicts remain `unknown`, include source-attributed normalized claims, and are not resolved by guessing; ambiguous multiple versions within one source remain unknown without being labeled a cross-document conflict. Version ranges and compatibility-matrix intent remain outside the heuristic.
+- Preserve optional missing/conflicting evidence and conflict-assessment fields returned by rule evaluators instead of replacing them with empty defaults.
 - Added scoring/report schema version 2 with determinate coverage; unknown findings are excluded from score points and remain explicit rather than being converted to failures.
 - Added finding fields for missing/conflicting evidence and explicit conflict-assessment status; contradiction detection is not yet implemented and remains a documented gap.
 - Tightened setup, contribution, security, and issue heuristics so conventional file names and empty headings alone do not establish actionable evidence.
