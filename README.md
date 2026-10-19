@@ -30,6 +30,8 @@ flowchart LR
 
 For contribution and support paths, see [CONTRIBUTING.md](CONTRIBUTING.md) and [SUPPORT.md](SUPPORT.md).
 
-The npm package is not published yet. For local development, check out `contribready-core` and `contribready-cli` as sibling directories; the CLI currently links to this source checkout. From this repository, run `npm ci && npm run verify` to lint/typecheck, build and test, and validate the npm package contents without publishing. The v0.1 compatibility target is Node.js 20, 22, and 24 on Ubuntu, Windows, and macOS.
+The npm package is not published yet. From this repository, run `npm ci && npm run verify` to lint/typecheck, build and test, and validate the npm package contents without publishing. The CLI declares Core as a registry dependency; before publication, the coordinated CI/release rehearsal packs Core and installs that tarball into CLI rather than importing a sibling source checkout. The proposal branch passed CI on Node.js 20, 22, and 24 on Ubuntu, Windows, and macOS; this does not imply npm publication or release.
+
+Reports currently use schema/scoring version 2. Unknown findings are excluded from the determinate percentage and counted separately; read `coveragePercentage`, `unknownRules`, and `notApplicableRules` with the score. The score is the result produced by the documented rules against available evidence, not a claim about actual contributor success. Findings currently set `conflictsAssessed: false`; the engine does not yet reconcile contradictory source claims. Core is intended to remain pure and deterministic; the local CLI consumes its public package contract, and the release process packs Core before CLI.
 
 Phase 15 expands static evidence classification for Deno, Bun, uv/PDM, SBT/Gradle, Docker, Nix, and version/toolchain files. Classification remains pure and does not execute any ecosystem tooling.

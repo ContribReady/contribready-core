@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added scoring/report schema version 2 with determinate coverage; unknown findings are excluded from score points and remain explicit rather than being converted to failures.
+- Added finding fields for missing/conflicting evidence and explicit conflict-assessment status; contradiction detection is not yet implemented and remains a documented gap.
+- Tightened setup, contribution, security, and issue heuristics so conventional file names and empty headings alone do not establish actionable evidence.
 - Issue readiness now treats empty template labels as prompts rather than evidence, searches issue-body evidence separately from the title, and reports accurate messages for failed checks.
 - Added initial typed evidence, rule, finding, report, and score contracts.
 - Added initial deterministic setup, testing, contribution, and security rules.
