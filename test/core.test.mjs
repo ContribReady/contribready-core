@@ -118,6 +118,17 @@ test("matching runtime versions do not conflict and insufficient version evidenc
   assert.equal(ambiguous.conflictingEvidence.length, 0);
 });
 
+test("Windows-style workflow paths are normalized and included in runtime conflict evidence", () => {
+  const finding = evaluateRules({ repository: { files: {
+    "README.md": "Use Node.js 18.",
+    ".github\\workflows\\ci.yml": "with:\n  node-version: 20",
+  } } }, coreRules).find((item) => item.rule.id === "CR-SETUP-002");
+  assert.equal(finding.outcome, "unknown");
+  assert.deepEqual(finding.conflictingEvidence.map((item) => [item.source, item.details.version]), [
+    [".github/workflows/ci.yml", "20"],
+    ["README.md", "18"],
+  ]);
+});
 test("testing rules distinguish commands, reproduction, CI, and expectations", () => {
   const ready = { repository: { files: {
     "README.md": "Run npm test.\n\nSteps to reproduce:\n1. Run the parser with an empty fixture.\n\nExpected result: the test should pass.",
