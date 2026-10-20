@@ -49,7 +49,7 @@ test("evidence classification is deterministic and ignores unknown source files"
 });
 
 test("expanded ecosystem installation evidence remains static and deterministic", () => {
-  const context = { repository: { files: { "pyproject.toml": "[project]", "README.md": "Use uv install and run pytest." } } };
+  const context = { repository: { files: { "pyproject.toml": "[project]", "README.md": "Use uv sync and run pytest." } } };
   const finding = evaluateRules(context, coreRules).find((item) => item.rule.id === "CR-SETUP-003");
   assert.equal(finding.outcome, "pass");
 });
@@ -58,6 +58,7 @@ test("setup rules distinguish complete, missing, and inapplicable setup evidence
   const ready = { repository: { files: {
     "README.md": "Getting started: Node.js 20.\n\n```sh\nnpm ci\nnpm test\n```",
     "package.json": "{}",
+    "package-lock.json": "{}",
     ".env.example": "API_URL=http://localhost",
     "CONTRIBUTING.md": "Create a branch, run npm test, and open a pull request.",
     "SECURITY.md": "Report vulnerabilities privately using Security → Advisories → Report a vulnerability.",
@@ -132,7 +133,7 @@ test("Windows-style workflow paths are normalized and included in runtime confli
 test("testing rules distinguish commands, reproduction, CI, and expectations", () => {
   const ready = { repository: { files: {
     "README.md": "Run npm test.\n\nSteps to reproduce:\n1. Run the parser with an empty fixture.\n\nExpected result: the test should pass.",
-    ".github/workflows/ci.yml": "name: CI",
+    ".github/workflows/ci.yml": "name: CI\njobs:\n  test:\n    steps:\n      - run: npm test",
     "tests/example.test.ts": "assert(true)",
   } } };
   const findings = evaluateRules(ready, coreRules).filter((finding) => finding.rule.area === "testing");
@@ -144,6 +145,50 @@ test("testing rules distinguish commands, reproduction, CI, and expectations", (
   assert.equal(byId.get("CR-TEST-002"), "unknown");
   assert.equal(byId.get("CR-TEST-003"), "unknown");
   assert.equal(byId.get("CR-TEST-004"), "unknown");
+});
+
+test("setup documentation is distinct from static metadata consistency and execution", () => {
+  const matching = evaluateRules({ repository: { files: {
+    "CONTRIBUTING.md": "Install dependencies with pnpm i, then run pnpm test.",
+    "package.json": JSON.stringify({ packageManager: "pnpm@12.14.0" }),
+    "pnpm-lock.yaml": "lockfileVersion: '9.0'",
+  } } }, coreRules).find((finding) => finding.rule.id === "CR-SETUP-003");
+  assert.equal(matching.outcome, "pass");
+  assert.deepEqual(matching.instructionVerification, { documentation: "documented", metadataConsistency: "consistent", execution: "not-run" });
+
+  const conflicting = evaluateRules({ repository: { files: {
+    "CONTRIBUTING.md": "Install dependencies with pnpm i.",
+    "package.json": JSON.stringify({ packageManager: "npm@10.0.0" }),
+    "package-lock.json": "{}",
+  } } }, coreRules).find((finding) => finding.rule.id === "CR-SETUP-003");
+  assert.equal(conflicting.outcome, "unknown");
+  assert.equal(conflicting.instructionVerification.metadataConsistency, "conflicting");
+  assert.equal(conflicting.instructionVerification.execution, "not-run");
+});
+
+test("historical and example documentation cannot satisfy contributor setup or test rules", () => {
+  const findings = evaluateRules({ repository: { files: {
+    "CHANGES.rst": "To install use pip install package. Run pytest. Expected result: success.",
+    "examples/demo/pyproject.toml": "[project]",
+    "examples/demo/README.md": "Run uv sync and pytest.",
+    "pyproject.toml": "[project]\nname = 'sample'",
+    ".github/workflows/labeler.yml": "name: labeler\nsteps:\n  - run: echo label",
+  } } }, coreRules);
+  const byId = new Map(findings.map((finding) => [finding.rule.id, finding]));
+  assert.notEqual(byId.get("CR-SETUP-001").outcome, "pass");
+  assert.notEqual(byId.get("CR-SETUP-003").outcome, "pass");
+  assert.notEqual(byId.get("CR-TEST-001").outcome, "pass");
+  assert.notEqual(byId.get("CR-TEST-003").outcome, "pass");
+});
+
+test("primary README content remains usable when it has headings but no recognized contributor heading", () => {
+  const finding = evaluateRules({ repository: { files: {
+    "README.md": "# Project overview\nA TypeScript project.\n\n## Getting started\nUse Node.js 20 and install dependencies with npm ci.",
+    "package.json": "{}",
+    "package-lock.json": "{}",
+  } } }, coreRules).find((item) => item.rule.id === "CR-SETUP-003");
+  assert.equal(finding.outcome, "pass");
+  assert.deepEqual(finding.instructionVerification, { documentation: "documented", metadataConsistency: "consistent", execution: "not-run" });
 });
 
 test("contribution rules distinguish workflow, review, and support guidance", () => {
