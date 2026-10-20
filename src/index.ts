@@ -43,7 +43,14 @@ export interface Finding {
   readonly evidenceMissing: readonly string[];
   readonly conflictingEvidence: readonly Evidence[];
   readonly conflictsAssessed: boolean;
+  readonly instructionVerification?: InstructionVerification;
   readonly recommendation: string;
+}
+
+export interface InstructionVerification {
+  readonly documentation: "documented" | "not-found" | "external-link-only" | "unclear";
+  readonly metadataConsistency: "not-assessed" | "consistent" | "conflicting";
+  readonly execution: "not-run";
 }
 
 export interface RuleContext {
