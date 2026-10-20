@@ -30,7 +30,13 @@ flowchart LR
 
 For contribution and support paths, see [CONTRIBUTING.md](CONTRIBUTING.md) and [SUPPORT.md](SUPPORT.md).
 
-The npm package is not published yet. From this repository, run `npm ci && npm run verify` to lint/typecheck, build and test, and validate the npm package contents without publishing. The CLI declares Core as a registry dependency; before publication, the coordinated CI/release rehearsal packs Core and installs that tarball into CLI rather than importing a sibling source checkout. The proposal branch passed CI on Node.js 20, 22, and 24 on Ubuntu, Windows, and macOS; this does not imply npm publication or release.
+Install Core from npm on Node.js 20 or newer:
+
+```bash
+npm install @contribready/core
+```
+
+For repository development, run `npm ci && npm run verify` to lint/typecheck, build and test, and validate the npm package contents. The coordinated CI/release rehearsal also packs Core and installs that tarball into CLI rather than importing a sibling source checkout. The release candidate passed CI on Node.js 20, 22, and 24 on Ubuntu, Windows, and macOS.
 
 Reports use schema/scoring version 2. Unknown findings are excluded from the determinate percentage and counted separately; read `coveragePercentage`, `unknownRules`, and `notApplicableRules` with the score. The score is the result produced by the documented rules against available evidence, not a claim about actual contributor success. Rule `CR-SETUP-002` now compares explicit runtime/toolchain version mentions across contributor-facing documentation and GitHub workflow files. When different requirement versions are found across sources, the result is `unknown`, source paths and normalized version claims are reported, and the analyzer does not choose an authoritative document. Multiple incompatible mentions within a single source also remain `unknown` without being asserted as a cross-document conflict. This bounded heuristic does not interpret version ranges, aliases, compatibility matrices, or migration intent; `conflictsAssessed: true` means only that this check ran, not that all contradictory documentation has been detected. Other rules still report `conflictsAssessed: false`. Core remains pure and deterministic; the local CLI consumes its public package contract, and the release process packs Core before CLI.
 
